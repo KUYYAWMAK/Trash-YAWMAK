@@ -1,0 +1,41 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+// MAC Address ของ Receiver
+uint8_t receiverAddress[] = {0x50, 0x02, 0x91, 0xFB, 0xD1, 0x24};
+
+// ข้อความสำหรับควบคุมไฟ
+bool ledState = false; // false = ปิด, true = เปิด
+
+void onSent(uint8_t *macAddr, uint8_t status) {
+  Serial.print("Message Sent. Status: ");
+  Serial.println(status == 0 ? "Success" : "Failed");
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // เริ่มต้น WiFi ในโหมด STA
+  WiFi.mode(WIFI_STA);
+
+  // เริ่มต้น ESP-NOW
+  if (esp_now_init() != 0) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+  // Register callback เมื่อส่งข้อมูลเสร็จ
+  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+  esp_now_register_send_cb(onSent);
+
+  // เพิ่ม peer (Receiver)
+  esp_now_add_peer(receiverAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+}
+
+void loop() {
+  // ส่งสถานะของไฟ
+  ledState = !ledState; // สลับสถานะ เปิด/ปิด
+  esp_now_send(receiverAddress, (uint8_t *)&ledState, sizeof(ledState));
+  Serial.println(ledState ? "Sent: Turn ON" : "Sent: Turn OFF");
+  delay(2000); // ส่งทุกๆ 2 วินาที
+}

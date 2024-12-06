@@ -1,0 +1,39 @@
+#include <ESP8266WiFi.h>
+#include <espnow.h>
+
+// กำหนดขาเชื่อมต่อ LED
+const int ledPin = D5; // บางบอร์ดใช้ขา D4 สำหรับ LED ในตัว
+
+void onDataRecv(uint8_t *macAddr, uint8_t *data, uint8_t len) {
+  bool ledState;
+  memcpy(&ledState, data, sizeof(ledState)); // อ่านสถานะไฟจากข้อมูลที่ได้รับ
+
+  // ควบคุม LED
+  digitalWrite(ledPin, ledState ? HIGH : LOW);
+  Serial.println(ledState ? "Received: Turn ON" : "Received: Turn OFF");
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // กำหนดขา LED เป็น Output
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW); // เริ่มต้นปิดไฟ
+
+  // เริ่มต้น WiFi ในโหมด STA
+  WiFi.mode(WIFI_STA);
+
+  // เริ่มต้น ESP-NOW
+  if (esp_now_init() != 0) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+  // Register callback เมื่อรับข้อมูล
+  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+  esp_now_register_recv_cb(onDataRecv);
+}
+
+void loop() {
+  // ไม่มีอะไรใน loop
+}
